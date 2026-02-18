@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { desc, gte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
@@ -12,11 +13,10 @@ export async function GET(request: Request) {
 
   // Calculate time filter
   let timeFilter: number | undefined;
-  const now = Math.floor(Date.now() / 1000);
   if (period === "today") {
-    timeFilter = now - 24 * 60 * 60;
+    timeFilter = dayjs().subtract(1, "day").unix();
   } else if (period === "week") {
-    timeFilter = now - 7 * 24 * 60 * 60;
+    timeFilter = dayjs().subtract(7, "day").unix();
   }
 
   const storyRows = timeFilter

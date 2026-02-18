@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -29,7 +30,7 @@ interface ChatState {
 }
 
 function generateId(): string {
-  return `room_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  return `room_${dayjs().valueOf()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
 function deriveTitle(messages: SerializedMessage[]): string {
@@ -50,7 +51,7 @@ export const useChatStore = create<ChatState>()(
 
       createRoom: () => {
         const id = generateId();
-        const now = new Date().toISOString();
+        const now = dayjs().toISOString();
         const room: ChatRoom = {
           id,
           title: "New Chat",
@@ -93,7 +94,7 @@ export const useChatStore = create<ChatState>()(
               ...r,
               messages,
               title,
-              updatedAt: new Date().toISOString(),
+              updatedAt: dayjs().toISOString(),
             };
           }),
         }));

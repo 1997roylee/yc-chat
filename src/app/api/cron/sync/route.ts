@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { type NextRequest, NextResponse } from "next/server";
 import { syncHackerNews } from "@/lib/services/hn-sync";
 
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       ...result,
-      syncedAt: new Date().toISOString(),
+      syncedAt: dayjs().toISOString(),
     });
   } catch (error) {
     console.error("Sync failed:", error);

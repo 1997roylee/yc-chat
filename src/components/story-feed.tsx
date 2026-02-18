@@ -1,21 +1,26 @@
 "use client";
 
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
 import { useState } from "react";
+import {
+  LuArrowUpFromDot,
+  LuClock,
+  LuExternalLink,
+  LuLoader,
+  LuMessageCircle,
+  LuUser,
+} from "react-icons/lu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { type StoryWithComments, useStories } from "@/lib/hooks/use-hn-data";
 import { useAppStore } from "@/lib/stores/app-store";
 
+dayjs.extend(relativeTime);
+
 function timeAgo(unixTime: number): string {
-  const seconds = Math.floor(Date.now() / 1000 - unixTime);
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return dayjs.unix(unixTime).fromNow();
 }
 
 function StoryCard({ story }: { story: StoryWithComments }) {
@@ -26,8 +31,8 @@ function StoryCard({ story }: { story: StoryWithComments }) {
       <div className="flex gap-3">
         {/* Score */}
         <div className="flex flex-col items-center justify-start min-w-[40px]">
+          <LuArrowUpFromDot className="h-4 w-4 text-orange-500" />
           <span className="text-lg font-bold text-orange-500">{story.score}</span>
-          <span className="text-xs text-muted-foreground">pts</span>
         </div>
 
         {/* Content */}
@@ -41,6 +46,9 @@ function StoryCard({ story }: { story: StoryWithComments }) {
             >
               {story.title}
             </a>
+            {story.url && (
+              <LuExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground mt-0.5" />
+            )}
           </div>
 
           {story.url && (
@@ -50,14 +58,21 @@ function StoryCard({ story }: { story: StoryWithComments }) {
           )}
 
           <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-            <span>by {story.by}</span>
-            <span>{timeAgo(story.time)}</span>
+            <span className="flex items-center gap-1">
+              <LuUser className="h-3 w-3" />
+              {story.by}
+            </span>
+            <span className="flex items-center gap-1">
+              <LuClock className="h-3 w-3" />
+              {timeAgo(story.time)}
+            </span>
             <a
               href={`https://news.ycombinator.com/item?id=${story.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:underline"
+              className="flex items-center gap-1 hover:underline"
             >
+              <LuMessageCircle className="h-3 w-3" />
               {story.descendants || 0} comments
             </a>
             <Badge variant="secondary" className="text-xs">
@@ -140,7 +155,7 @@ export function StoryFeed() {
           {isLoading && (
             <div className="flex items-center justify-center py-12">
               <div className="text-center space-y-2">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500 border-t-transparent mx-auto" />
+                <LuLoader className="h-8 w-8 animate-spin text-orange-500 mx-auto" />
                 <p className="text-sm text-muted-foreground">Loading stories...</p>
               </div>
             </div>

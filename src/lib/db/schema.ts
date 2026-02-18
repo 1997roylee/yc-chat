@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const stories = sqliteTable("stories", {
@@ -12,7 +13,7 @@ export const stories = sqliteTable("stories", {
   type: text("type").notNull().default("story"), // story, job, poll
   syncedAt: text("synced_at")
     .notNull()
-    .$defaultFn(() => new Date().toISOString()),
+    .$defaultFn(() => dayjs().toISOString()),
 });
 
 export const comments = sqliteTable("comments", {
@@ -26,7 +27,7 @@ export const comments = sqliteTable("comments", {
   time: integer("time"), // unix timestamp
   syncedAt: text("synced_at")
     .notNull()
-    .$defaultFn(() => new Date().toISOString()),
+    .$defaultFn(() => dayjs().toISOString()),
 });
 
 export const chatMessages = sqliteTable("chat_messages", {
@@ -35,14 +36,14 @@ export const chatMessages = sqliteTable("chat_messages", {
   content: text("content").notNull(),
   createdAt: text("created_at")
     .notNull()
-    .$defaultFn(() => new Date().toISOString()),
+    .$defaultFn(() => dayjs().toISOString()),
 });
 
 export const syncLog = sqliteTable("sync_log", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   startedAt: text("started_at")
     .notNull()
-    .$defaultFn(() => new Date().toISOString()),
+    .$defaultFn(() => dayjs().toISOString()),
   completedAt: text("completed_at"),
   storiesCount: integer("stories_count").default(0),
   commentsCount: integer("comments_count").default(0),

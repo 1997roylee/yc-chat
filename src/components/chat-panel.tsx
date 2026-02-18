@@ -4,6 +4,16 @@ import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import { TextStreamChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { IoSend } from "react-icons/io5";
+import {
+  LuMessageSquare,
+  LuPanelLeftClose,
+  LuPanelLeftOpen,
+  LuPlus,
+  LuTrash2,
+  LuUser,
+} from "react-icons/lu";
+import { SiYcombinator } from "react-icons/si";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -57,7 +67,11 @@ function ChatSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: ()
           className="p-1.5 rounded-md hover:bg-accent text-muted-foreground"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {collapsed ? ">" : "<"}
+          {collapsed ? (
+            <LuPanelLeftOpen className="h-4 w-4" />
+          ) : (
+            <LuPanelLeftClose className="h-4 w-4" />
+          )}
         </button>
       </div>
 
@@ -69,7 +83,8 @@ function ChatSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: ()
           className={cn("w-full", collapsed && "px-0")}
           onClick={() => createRoom()}
         >
-          {collapsed ? "+" : "+ New Chat"}
+          <LuPlus className="h-4 w-4" />
+          {!collapsed && "New Chat"}
         </Button>
       </div>
 
@@ -105,7 +120,7 @@ function ChatSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: ()
                 }}
                 title="Delete chat"
               >
-                &times;
+                <LuTrash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
@@ -221,8 +236,8 @@ function ActiveChat({ roomId }: { roomId: string }) {
               className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               {message.role === "assistant" && (
-                <Avatar className="h-8 w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white text-xs font-bold">
-                  HN
+                <Avatar className="h-8 w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white">
+                  <SiYcombinator className="h-4 w-4" />
                 </Avatar>
               )}
               <Card
@@ -235,8 +250,8 @@ function ActiveChat({ roomId }: { roomId: string }) {
                 </div>
               </Card>
               {message.role === "user" && (
-                <Avatar className="h-8 w-8 shrink-0 bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
-                  You
+                <Avatar className="h-8 w-8 shrink-0 bg-blue-500 flex items-center justify-center text-white">
+                  <LuUser className="h-4 w-4" />
                 </Avatar>
               )}
             </div>
@@ -244,8 +259,8 @@ function ActiveChat({ roomId }: { roomId: string }) {
 
           {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
             <div className="flex gap-3">
-              <Avatar className="h-8 w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white text-xs font-bold">
-                HN
+              <Avatar className="h-8 w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white">
+                <SiYcombinator className="h-4 w-4" />
               </Avatar>
               <Card className="p-3 bg-card">
                 <div className="flex space-x-1">
@@ -276,6 +291,7 @@ function ActiveChat({ roomId }: { roomId: string }) {
             className="flex-1"
           />
           <Button type="submit" disabled={isLoading || !input.trim()}>
+            <IoSend className="h-4 w-4" />
             Send
           </Button>
         </form>
@@ -308,7 +324,10 @@ export function ChatPanel() {
         <ActiveChat key={activeRoomId} roomId={activeRoomId} />
       ) : (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          <p className="text-sm">Select or create a chat to get started</p>
+          <div className="flex items-center gap-2 text-sm">
+            <LuMessageSquare className="h-5 w-5" />
+            <p>Select or create a chat to get started</p>
+          </div>
         </div>
       )}
     </div>

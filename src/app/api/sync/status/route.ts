@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { desc, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
@@ -32,7 +33,7 @@ export async function GET() {
   // Determine staleness
   let isStale = true;
   if (lastSyncedAt) {
-    const age = Date.now() - new Date(lastSyncedAt).getTime();
+    const age = dayjs().diff(dayjs(lastSyncedAt));
     isStale = age > STALE_THRESHOLD_MS;
   }
 

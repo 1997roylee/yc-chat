@@ -1,5 +1,6 @@
 import { openai } from "@ai-sdk/openai";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import dayjs from "dayjs";
 import { desc, gte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { comments, stories } from "@/lib/db/schema";
@@ -7,9 +8,8 @@ import { comments, stories } from "@/lib/db/schema";
 export const maxDuration = 30;
 
 function getHNContext(): string {
-  const now = Math.floor(Date.now() / 1000);
-  const oneDayAgo = now - 24 * 60 * 60;
-  const oneWeekAgo = now - 7 * 24 * 60 * 60;
+  const oneDayAgo = dayjs().subtract(1, "day").unix();
+  const oneWeekAgo = dayjs().subtract(7, "day").unix();
 
   // Get today's top stories
   const todayStories = db

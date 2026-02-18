@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import type { NewComment, NewStory } from "@/lib/db/schema";
@@ -108,7 +109,7 @@ export async function syncHackerNews(): Promise<{
         by: item.by ?? "unknown",
         score: item.score ?? 0,
         descendants: item.descendants ?? 0,
-        time: item.time ?? Math.floor(Date.now() / 1000),
+        time: item.time ?? dayjs().unix(),
         type: item.type ?? "story",
       };
 
@@ -122,7 +123,7 @@ export async function syncHackerNews(): Promise<{
             text: storyData.text,
             score: storyData.score,
             descendants: storyData.descendants,
-            syncedAt: new Date().toISOString(),
+            syncedAt: dayjs().toISOString(),
           },
         })
         .run();
@@ -139,7 +140,7 @@ export async function syncHackerNews(): Promise<{
               target: comments.id,
               set: {
                 text: comment.text,
-                syncedAt: new Date().toISOString(),
+                syncedAt: dayjs().toISOString(),
               },
             })
             .run();
@@ -151,7 +152,7 @@ export async function syncHackerNews(): Promise<{
     // Update sync log
     db.update(syncLog)
       .set({
-        completedAt: new Date().toISOString(),
+        completedAt: dayjs().toISOString(),
         storiesCount,
         commentsCount,
         status: "completed",
@@ -163,7 +164,7 @@ export async function syncHackerNews(): Promise<{
   } catch (error) {
     db.update(syncLog)
       .set({
-        completedAt: new Date().toISOString(),
+        completedAt: dayjs().toISOString(),
         status: "failed",
         error: error instanceof Error ? error.message : "Unknown error",
       })

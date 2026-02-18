@@ -1,5 +1,8 @@
 "use client";
 
+import dayjs from "dayjs";
+import { IoChatbubblesOutline, IoNewspaperOutline } from "react-icons/io5";
+import { LuLoader } from "react-icons/lu";
 import { ChatPanel } from "@/components/chat-panel";
 import { StoryFeed } from "@/components/story-feed";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +16,7 @@ function SyncBanner() {
 
   return (
     <div className="flex items-center justify-center gap-2 bg-orange-500 px-4 py-1.5 text-sm text-white">
-      <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+      <LuLoader className="h-3.5 w-3.5 animate-spin" />
       <span>Syncing Hacker News data{lastSyncedAt ? " (updating)" : ""}...</span>
     </div>
   );
@@ -44,7 +47,7 @@ export function AppShell() {
 
         {lastSyncedAt && (
           <span className="text-xs text-muted-foreground">
-            Last sync: {new Date(lastSyncedAt).toLocaleTimeString()}
+            Last sync: {dayjs(lastSyncedAt).format("HH:mm:ss")}
           </span>
         )}
       </header>
@@ -53,20 +56,21 @@ export function AppShell() {
       <div className="flex border-b px-6">
         {(
           [
-            { key: "chat", label: "Chat with AI" },
-            { key: "feed", label: "Story Feed" },
-          ] as { key: Tab; label: string }[]
+            { key: "chat", label: "Chat with AI", icon: IoChatbubblesOutline },
+            { key: "feed", label: "Story Feed", icon: IoNewspaperOutline },
+          ] as { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[]
         ).map((tab) => (
           <button
             type="button"
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab.key
                 ? "border-orange-500 text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
+            <tab.icon className="h-4 w-4" />
             {tab.label}
           </button>
         ))}
