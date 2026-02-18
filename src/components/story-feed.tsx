@@ -1,0 +1,173 @@
+"use client";
+
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { type StoryWithComments, useStories } from "@/lib/hooks/use-hn-data";
+import { useAppStore } from "@/lib/stores/app-store";
+
+function timeAgo(unixTime: number): string {
+  const seconds = Math.floor(Date.now() / 1000 - unixTime);
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function StoryCard({ story }: { story: StoryWithComments }) {
+  const [showComments, setShowComments] = useState(false);
+
+  return (
+    <Card className="p-4 hover:bg-accent/50 transition-colors">
+      <div className="flex gap-3">
+        {/* Score */}
+        <div className="flex flex-col items-center justify-start min-w-[40px]">
+          <span className="text-lg font-bold text-orange-500">{story.score}</span>
+          <span className="text-xs text-muted-foreground">pts</span>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start gap-2">
+            <a
+              href={story.url || `https://news.ycombinator.com/item?id=${story.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium hover:underline line-clamp-2 flex-1"
+            >
+              {story.title}
+            </a>
+          </div>
+
+          {story.url && (
+            <p className="text-xs text-muted-foreground mt-1 truncate">
+              {new URL(story.url).hostname}
+            </p>
+          )}
+
+          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+            <span>by {story.by}</span>
+            <span>{timeAgo(story.time)}</span>
+            <a
+              href={`https://news.ycombinator.com/item?id=${story.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline"
+            >
+              {story.descendants || 0} comments
+            </a>
+            <Badge variant="secondary" className="text-xs">
+              {story.type}
+            </Badge>
+          </div>
+
+          {story.text && (
+            <p
+              className="text-sm text-muted-foreground mt-2 line-clamp-2"
+              dangerouslySetInnerHTML={{ __html: story.text }}
+            />
+          )}
+
+          {/* Comments toggle */}
+          {story.comments.length > 0 && (
+            <div className="mt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowComments(!showComments)}
+                className="text-xs h-7 px-2"
+              >
+                {showComments ? "Hide" : "Show"} {story.comments.length} synced comments
+              </Button>
+
+              {showComments && (
+                <div className="mt-2 space-y-2 pl-3 border-l-2 border-border">
+                  {story.comments.map((comment) => (
+                    <div key={comment.id} className="text-xs">
+                      <span className="font-medium text-orange-500">{comment.by}</span>
+                      {comment.time && (
+                        <span className="text-muted-foreground ml-2">{timeAgo(comment.time)}</span>
+                      )}
+                      {comment.text && (
+                        <div
+                          className="text-muted-foreground mt-1 prose prose-xs max-w-none"
+                          dangerouslySetInnerHTML={{ __html: comment.text }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+export function StoryFeed() {
+  const { feedPeriod, setFeedPeriod } = useAppStore();
+  const { data, isLoading, error } = useStories(feedPeriod);
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Period filter */}
+      <div className="flex items-center gap-2 p-4 border-b">
+        <span className="text-sm font-medium">Period:</span>
+        {(["today", "week", "all"] as const).map((period) => (
+          <Button
+            key={period}
+            variant={feedPeriod === period ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFeedPeriod(period)}
+          >
+            {period === "today" ? "Today" : period === "week" ? "This Week" : "All"}
+          </Button>
+        ))}
+        {data && (
+          <span className="text-xs text-muted-foreground ml-auto">{data.total} stories</span>
+        )}
+      </div>
+
+      {/* Stories list */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="p-4 space-y-3">
+          {isLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center space-y-2">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500 border-t-transparent mx-auto" />
+                <p className="text-sm text-muted-foreground">Loading stories...</p>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+              Failed to load stories. Try syncing first.
+            </div>
+          )}
+
+          {data?.stories.length === 0 && !isLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground">No stories found for this period.</p>
+                <p className="text-xs text-muted-foreground">
+                  Click the Sync button to fetch the latest data from Hacker News.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {data?.stories.map((story) => (
+            <StoryCard key={story.id} story={story} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

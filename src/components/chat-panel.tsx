@@ -1,0 +1,316 @@
+"use client";
+
+import { useChat } from "@ai-sdk/react";
+import type { UIMessage } from "ai";
+import { TextStreamChatTransport } from "ai";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { type SerializedMessage, useChatStore } from "@/lib/stores/chat-store";
+import { cn, linkify } from "@/lib/utils";
+
+function getMessageText(parts: Array<{ type: string; text?: string }>): string {
+  return parts
+    .filter((p) => p.type === "text")
+    .map((p) => p.text ?? "")
+    .join("");
+}
+
+function serializeMessages(messages: UIMessage[]): SerializedMessage[] {
+  return messages.map((m) => ({
+    id: m.id,
+    role: m.role as "user" | "assistant",
+    parts: (m.parts as Array<{ type: string; text?: string }>).filter((p) => p.type === "text"),
+  }));
+}
+
+function deserializeMessages(messages: SerializedMessage[]): UIMessage[] {
+  return messages.map((m) => ({
+    id: m.id,
+    role: m.role,
+    parts: m.parts,
+  })) as UIMessage[];
+}
+
+// ─── Sidebar ───────────────────────────────────────────────────────────────────
+
+function ChatSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  const { rooms, activeRoomId, createRoom, deleteRoom, setActiveRoom } = useChatStore();
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col border-r bg-muted/30 transition-all duration-200",
+        collapsed ? "w-12" : "w-64",
+      )}
+    >
+      {/* Sidebar header */}
+      <div className="flex items-center justify-between border-b px-2 py-2">
+        {!collapsed && (
+          <span className="text-xs font-semibold text-muted-foreground pl-1">Chats</span>
+        )}
+        <button
+          type="button"
+          onClick={onToggle}
+          className="p-1.5 rounded-md hover:bg-accent text-muted-foreground"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? ">" : "<"}
+        </button>
+      </div>
+
+      {/* New chat button */}
+      <div className="p-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn("w-full", collapsed && "px-0")}
+          onClick={() => createRoom()}
+        >
+          {collapsed ? "+" : "+ New Chat"}
+        </Button>
+      </div>
+
+      {/* Room list */}
+      {!collapsed && (
+        <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2 space-y-1">
+          {rooms.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">No chats yet</p>
+          )}
+          {rooms.map((room) => (
+            <div
+              key={room.id}
+              className={cn(
+                "group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors",
+                room.id === activeRoomId
+                  ? "bg-accent text-accent-foreground"
+                  : "hover:bg-accent/50 text-muted-foreground",
+              )}
+            >
+              <button
+                type="button"
+                className="flex-1 text-left truncate"
+                onClick={() => setActiveRoom(room.id)}
+              >
+                {room.title}
+              </button>
+              <button
+                type="button"
+                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive p-0.5 shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteRoom(room.id);
+                }}
+                title="Delete chat"
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Chat Area ─────────────────────────────────────────────────────────────────
+
+function ActiveChat({ roomId }: { roomId: string }) {
+  const { saveMessages, getActiveRoom } = useChatStore();
+
+  // Keep saveMessages ref stable to avoid function in useEffect deps
+  const saveMessagesRef = useRef(saveMessages);
+  saveMessagesRef.current = saveMessages;
+
+  // Component is keyed by roomId so this only runs once per mount
+  const [initialMessages] = useState(() => {
+    const room = getActiveRoom();
+    return room?.messages ? deserializeMessages(room.messages) : [];
+  });
+
+  const transport = useMemo(() => new TextStreamChatTransport({ api: "/api/chat" }), []);
+
+  const { messages, sendMessage, status, error } = useChat({
+    id: roomId,
+    messages: initialMessages,
+    transport,
+  });
+
+  const [input, setInput] = useState("");
+  const isLoading = status === "streaming" || status === "submitted";
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom on new messages
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll on new messages
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Persist messages to store whenever they change (debounced)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    if (messages.length === 0) return;
+    clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveMessagesRef.current(roomId, serializeMessages(messages));
+    }, 500);
+    return () => clearTimeout(saveTimeoutRef.current);
+  }, [messages, roomId]);
+
+  // Reset input when switching rooms
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset state on room switch
+  useEffect(() => {
+    setInput("");
+  }, [roomId]);
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!input.trim() || isLoading) return;
+      sendMessage({ text: input });
+      setInput("");
+    },
+    [input, isLoading, sendMessage],
+  );
+
+  const handleSuggestion = useCallback(
+    (text: string) => {
+      sendMessage({ text });
+    },
+    [sendMessage],
+  );
+
+  return (
+    <div className="flex h-full flex-col flex-1">
+      {/* Messages */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4" ref={scrollRef}>
+        {messages.length === 0 && (
+          <div className="flex h-full items-center justify-center text-muted-foreground">
+            <div className="text-center space-y-3 max-w-md">
+              <h3 className="text-lg font-medium">Ask me about Hacker News</h3>
+              <p className="text-sm">Try questions like:</p>
+              <div className="space-y-2">
+                {[
+                  "What's trending on HN today?",
+                  "Summarize the top stories this week",
+                  "Any interesting AI discussions?",
+                  "What are the hottest debates right now?",
+                ].map((suggestion) => (
+                  <button
+                    type="button"
+                    key={suggestion}
+                    onClick={() => handleSuggestion(suggestion)}
+                    className="block w-full rounded-lg border border-border bg-card p-3 text-left text-sm transition-colors hover:bg-accent"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+            >
+              {message.role === "assistant" && (
+                <Avatar className="h-8 w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white text-xs font-bold">
+                  HN
+                </Avatar>
+              )}
+              <Card
+                className={`max-w-[80%] p-3 ${
+                  message.role === "user" ? "bg-primary text-primary-foreground" : "bg-card"
+                }`}
+              >
+                <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                  {linkify(getMessageText(message.parts as Array<{ type: string; text?: string }>))}
+                </div>
+              </Card>
+              {message.role === "user" && (
+                <Avatar className="h-8 w-8 shrink-0 bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                  You
+                </Avatar>
+              )}
+            </div>
+          ))}
+
+          {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
+            <div className="flex gap-3">
+              <Avatar className="h-8 w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white text-xs font-bold">
+                HN
+              </Avatar>
+              <Card className="p-3 bg-card">
+                <div className="flex space-x-1">
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.2s]" />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.4s]" />
+                </div>
+              </Card>
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+            Error: {error.message}. Make sure your OPENAI_API_KEY is set.
+          </div>
+        )}
+      </div>
+
+      {/* Input */}
+      <div className="border-t p-4">
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask about Hacker News..."
+            disabled={isLoading}
+            className="flex-1"
+          />
+          <Button type="submit" disabled={isLoading || !input.trim()}>
+            Send
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Outer ChatPanel ───────────────────────────────────────────────────────────
+
+export function ChatPanel() {
+  const { activeRoomId, createRoom, rooms } = useChatStore();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Keep createRoom ref stable to avoid function in useEffect deps
+  const createRoomRef = useRef(createRoom);
+  createRoomRef.current = createRoom;
+
+  // Auto-create a first room if none exist
+  useEffect(() => {
+    if (rooms.length === 0) {
+      createRoomRef.current();
+    }
+  }, [rooms.length]);
+
+  return (
+    <div className="flex h-full">
+      <ChatSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((v) => !v)} />
+      {activeRoomId ? (
+        <ActiveChat key={activeRoomId} roomId={activeRoomId} />
+      ) : (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <p className="text-sm">Select or create a chat to get started</p>
+        </div>
+      )}
+    </div>
+  );
+}
