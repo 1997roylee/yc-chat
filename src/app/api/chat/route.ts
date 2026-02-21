@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import dayjs from "dayjs";
 import { desc, gte, sql } from "drizzle-orm";
@@ -85,6 +85,12 @@ Here is the current Hacker News data:
 
 export async function POST(req: Request) {
   const { messages } = (await req.json()) as { messages: UIMessage[] };
+
+  // Allow clients to supply their own API key via a request header
+  const clientApiKey = req.headers.get("x-openai-api-key");
+  const openai = createOpenAI({
+    apiKey: clientApiKey ?? process.env.OPENAI_API_KEY,
+  });
 
   const hnContext = getHNContext();
 

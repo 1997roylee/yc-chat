@@ -6,6 +6,8 @@ import { TextStreamChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IoSend } from "react-icons/io5";
 import {
+  LuCheck,
+  LuCopy,
   LuMessageSquare,
   LuPanelLeftClose,
   LuPanelLeftOpen,
@@ -14,12 +16,25 @@ import {
   LuUser,
 } from "react-icons/lu";
 import { SiYcombinator } from "react-icons/si";
+import { MarkdownContent } from "@/components/markdown-content";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { type SerializedMessage, useChatStore } from "@/lib/stores/chat-store";
-import { cn, linkify } from "@/lib/utils";
+import { useSettingsStore } from "@/lib/stores/settings-store";
+import { cn } from "@/lib/utils";
+
+function useCopy(text: string) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+  return { copied, copy };
+}
 
 function getMessageText(parts: Array<{ type: string; text?: string }>): string {
   return parts
@@ -130,6 +145,36 @@ function ChatSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: ()
   );
 }
 
+// ─── Assistant Message ─────────────────────────────────────────────────────────
+
+function AssistantMessage({ text }: { text: string }) {
+  const { copied, copy } = useCopy(text);
+
+  return (
+    <div className="group relative max-w-[80%]">
+      <Card className="p-3 bg-card text-sm">
+        <MarkdownContent content={text} />
+      </Card>
+      {/* Copy raw button — appears on hover once there's content */}
+      {text && (
+        <button
+          type="button"
+          onClick={copy}
+          className={cn(
+            "absolute -bottom-6 right-0 flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-all",
+            "text-muted-foreground hover:text-foreground",
+            "opacity-0 group-hover:opacity-100",
+          )}
+          title="Copy raw response"
+        >
+          {copied ? <LuCheck className="h-3 w-3" /> : <LuCopy className="h-3 w-3" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Chat Area ─────────────────────────────────────────────────────────────────
 
 function ActiveChat({ roomId }: { roomId: string }) {
@@ -145,7 +190,17 @@ function ActiveChat({ roomId }: { roomId: string }) {
     return room?.messages ? deserializeMessages(room.messages) : [];
   });
 
-  const transport = useMemo(() => new TextStreamChatTransport({ api: "/api/chat" }), []);
+  const transport = useMemo(
+    () =>
+      new TextStreamChatTransport({
+        api: "/api/chat",
+        headers: (): Record<string, string> => {
+          const key = useSettingsStore.getState().apiKey;
+          return key ? { "x-openai-api-key": key } : {};
+        },
+      }),
+    [],
+  );
 
   const { messages, sendMessage, status, error } = useChat({
     id: roomId,
@@ -230,32 +285,33 @@ function ActiveChat({ roomId }: { roomId: string }) {
         )}
 
         <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              {message.role === "assistant" && (
-                <Avatar className="h-8 w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white">
-                  <SiYcombinator className="h-4 w-4" />
-                </Avatar>
-              )}
-              <Card
-                className={`max-w-[80%] p-3 ${
-                  message.role === "user" ? "bg-primary text-primary-foreground" : "bg-card"
-                }`}
+          {messages.map((message) => {
+            const text = getMessageText(message.parts as Array<{ type: string; text?: string }>);
+            return (
+              <div
+                key={message.id}
+                className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-                  {linkify(getMessageText(message.parts as Array<{ type: string; text?: string }>))}
-                </div>
-              </Card>
-              {message.role === "user" && (
-                <Avatar className="h-8 w-8 shrink-0 bg-blue-500 flex items-center justify-center text-white">
-                  <LuUser className="h-4 w-4" />
-                </Avatar>
-              )}
-            </div>
-          ))}
+                {message.role === "assistant" && (
+                  <Avatar className="h-8 w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white">
+                    <SiYcombinator className="h-4 w-4" />
+                  </Avatar>
+                )}
+                {message.role === "assistant" ? (
+                  <AssistantMessage text={text} />
+                ) : (
+                  <Card className="max-w-[80%] p-3 bg-primary text-primary-foreground">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{text}</p>
+                  </Card>
+                )}
+                {message.role === "user" && (
+                  <Avatar className="h-8 w-8 shrink-0 bg-blue-500 flex items-center justify-center text-white">
+                    <LuUser className="h-4 w-4" />
+                  </Avatar>
+                )}
+              </div>
+            );
+          })}
 
           {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
             <div className="flex gap-3">
@@ -275,7 +331,8 @@ function ActiveChat({ roomId }: { roomId: string }) {
 
         {error && (
           <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-            Error: {error.message}. Make sure your OPENAI_API_KEY is set.
+            Error: {error.message}. Make sure an OpenAI API key is set — use the &quot;Set API
+            Key&quot; button in the header.
           </div>
         )}
       </div>
