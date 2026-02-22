@@ -14,14 +14,10 @@ import {
   LuPanelLeftOpen,
   LuPlus,
   LuTrash2,
-  LuUser,
   LuX,
 } from "react-icons/lu";
-import { SiYcombinator } from "react-icons/si";
 import { MarkdownContent } from "@/components/markdown-content";
-import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type SerializedMessage, useChatStore } from "@/lib/stores/chat-store";
@@ -229,16 +225,16 @@ function AssistantMessage({ text }: { text: string }) {
   const { copied, copy } = useCopy(text);
 
   return (
-    <div className="group relative max-w-[90%] sm:max-w-[80%]">
-      <Card className="p-3 bg-card text-sm">
+    <div className="group relative max-w-[92%] sm:max-w-[85%]">
+      <div className="rounded-2xl rounded-tl-sm bg-muted px-4 py-3 text-base leading-relaxed">
         <MarkdownContent content={text} />
-      </Card>
+      </div>
       {text && (
         <button
           type="button"
           onClick={copy}
           className={cn(
-            "absolute -bottom-6 right-0 flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-all",
+            "absolute -bottom-6 left-0 flex items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-all",
             "text-muted-foreground hover:text-foreground",
             "opacity-0 group-hover:opacity-100",
           )}
@@ -419,7 +415,7 @@ function ActiveChat({ roomId, onOpenDrawer }: { roomId: string; onOpenDrawer: ()
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               {messages.map((message) => {
                 const text = getMessageText(
                   message.parts as Array<{ type: string; text?: string }>,
@@ -427,42 +423,24 @@ function ActiveChat({ roomId, onOpenDrawer }: { roomId: string; onOpenDrawer: ()
                 return (
                   <div
                     key={message.id}
-                    className={`flex gap-2 sm:gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                   >
-                    {message.role === "assistant" && (
-                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white">
-                        <SiYcombinator className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      </Avatar>
-                    )}
                     {message.role === "assistant" ? (
                       <AssistantMessage text={text} />
                     ) : (
-                      <Card className="max-w-[90%] sm:max-w-[80%] p-3 bg-primary text-primary-foreground">
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{text}</p>
-                      </Card>
-                    )}
-                    {message.role === "user" && (
-                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 bg-blue-500 flex items-center justify-center text-white">
-                        <LuUser className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      </Avatar>
+                      <div className="max-w-[80%] sm:max-w-[70%] rounded-full bg-primary px-5 py-3 text-base leading-relaxed text-primary-foreground">
+                        {text}
+                      </div>
                     )}
                   </div>
                 );
               })}
 
               {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-                <div className="flex gap-2 sm:gap-3">
-                  <Avatar className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white">
-                    <SiYcombinator className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </Avatar>
-                  {/* <Card className="p-3 bg-card">
-                    <div className="flex space-x-1">
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" />
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.2s]" />
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.4s]" />
-                    </div>
-                  </Card> */}
-                  <Spinner className="text-2xl" />
+                <div className="flex justify-start">
+                  <div className="rounded-2xl rounded-tl-sm bg-muted px-4 py-3">
+                    <Spinner className="text-xl" />
+                  </div>
                 </div>
               )}
             </div>
