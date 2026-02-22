@@ -1,0 +1,67 @@
+layout:
+  title: "HN Chatroom - Hacker News AI Assistant"
+  description: "Chat with AI about what's happening on Hacker News. Get summaries, insights, and explore trending stories."
+
+header:
+  appName: "HN Chatroom"
+  badge: "Hacker News AI Assistant"
+  lastSync: "Last sync: {time}"
+  github: "GitHub"
+
+sync:
+  syncing: "Syncing Hacker News data..."
+  syncingUpdating: "Syncing Hacker News data (updating)..."
+
+apiKey:
+  buttonSet: "API Key Set"
+  buttonUnset: "Set API Key"
+  dialogTitle: "OpenAI API Key"
+  dialogDescription: "Enter your own OpenAI API key. It is stored locally in your browser and sent with each request — it is never saved on the server."
+  placeholder: "sk-..."
+  removeKey: "Remove Key"
+  save: "Save"
+  noKeyPrompt: "Don't have a key?"
+  getKeyLink: "Get one from OpenAI"
+
+tabs:
+  chat: "Chat with AI"
+  feed: "Story Feed"
+
+chat:
+  sidebarTitle: "Chats"
+  expandSidebar: "Expand sidebar"
+  collapseSidebar: "Collapse sidebar"
+  newChat: "New Chat"
+  noChats: "No chats yet"
+  deleteChat: "Delete chat"
+  emptyHeading: "Ask me about Hacker News"
+  emptySubtitle: "Try questions like:"
+  suggestions:
+    trending: "What's trending on HN today?"
+    summarize: "Summarize the top stories this week"
+    ai: "Any interesting AI discussions?"
+    debates: "What are the hottest debates right now?"
+  inputPlaceholder: "Ask about Hacker News..."
+  send: "Send"
+  noActiveRoom: "Select or create a chat to get started"
+  error: "Error: {message}. Make sure an OpenAI API key is set — use the \"Set API Key\" button in the header."
+  copyResponse: "Copy raw response"
+  copy: "Copy"
+  copied: "Copied"
+
+feed:
+  period: "Period:"
+  today: "Today"
+  thisWeek: "This Week"
+  all: "All"
+  storiesCount: "{count} stories"
+  commentsCount: "{count} comments"
+  showComments: "Show {count} synced comments"
+  hideComments: "Hide {count} synced comments"
+  loading: "Loading stories..."
+  loadError: "Failed to load stories. Try syncing first."
+  emptyTitle: "No stories found for this period."
+  emptyHint: "Click the Sync button to fetch the latest data from Hacker News."
+
+common:
+  close: "Close"

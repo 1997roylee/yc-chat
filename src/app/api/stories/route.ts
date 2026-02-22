@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import { desc, gte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import type { Story } from "@/lib/db/schema";
 import { comments, stories } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -19,24 +20,22 @@ export async function GET(request: Request) {
     timeFilter = dayjs().subtract(7, "day").unix();
   }
 
-  const storyRows = timeFilter
-    ? db
+  const storyRows: Story[] = timeFilter
+    ? await db
         .select()
         .from(stories)
         .where(gte(stories.time, timeFilter))
         .orderBy(desc(stories.score))
         .limit(limit)
-        .all()
-    : db.select().from(stories).orderBy(desc(stories.score)).limit(limit).all();
+    : await db.select().from(stories).orderBy(desc(stories.score)).limit(limit);
 
   // Fetch comment counts per story
   const storiesWithComments = await Promise.all(
-    storyRows.map(async (story) => {
-      const storyComments = db
+    storyRows.map(async (story: Story) => {
+      const storyComments = await db
         .select()
         .from(comments)
-        .where(sql`${comments.storyId} = ${story.id}`)
-        .all();
+        .where(sql`${comments.storyId} = ${story.id}`);
       return {
         ...story,
         comments: storyComments,

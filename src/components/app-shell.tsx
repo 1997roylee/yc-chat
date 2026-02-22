@@ -1,6 +1,7 @@
 "use client";
 
 import dayjs from "dayjs";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { IoChatbubblesOutline, IoNewspaperOutline } from "react-icons/io5";
 import { LuKey, LuLoader } from "react-icons/lu";
@@ -20,9 +21,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAutoSync } from "@/lib/hooks/use-hn-data";
 import { type Tab, useAppStore } from "@/lib/stores/app-store";
+import { type Locale, useLocaleStore } from "@/lib/stores/locale-store";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 
 function SyncBanner() {
+  const t = useTranslations("sync");
   const { isSyncing, lastSyncedAt } = useAppStore();
 
   if (!isSyncing) return null;
@@ -30,12 +33,13 @@ function SyncBanner() {
   return (
     <div className="flex items-center justify-center gap-2 bg-orange-500 px-4 py-1.5 text-sm text-white">
       <LuLoader className="h-3.5 w-3.5 animate-spin" />
-      <span>Syncing Hacker News data{lastSyncedAt ? " (updating)" : ""}...</span>
+      <span>{lastSyncedAt ? t("syncingUpdating") : t("syncing")}</span>
     </div>
   );
 }
 
 function ApiKeyDialog() {
+  const t = useTranslations("apiKey");
   const { apiKey, setApiKey, clearApiKey } = useSettingsStore();
   const [draft, setDraft] = useState(apiKey);
   const [open, setOpen] = useState(false);
@@ -71,21 +75,18 @@ function ApiKeyDialog() {
           className={isSet ? "border-green-500 text-green-600" : ""}
         >
           <LuKey className="h-4 w-4" />
-          {isSet ? "API Key Set" : "Set API Key"}
+          {isSet ? t("buttonSet") : t("buttonUnset")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>OpenAI API Key</DialogTitle>
-          <DialogDescription>
-            Enter your own OpenAI API key. It is stored locally in your browser and sent with each
-            request — it is never saved on the server.
-          </DialogDescription>
+          <DialogTitle>{t("dialogTitle")}</DialogTitle>
+          <DialogDescription>{t("dialogDescription")}</DialogDescription>
         </DialogHeader>
         <div className="mt-4 space-y-4">
           <Input
             type="password"
-            placeholder="sk-..."
+            placeholder={t("placeholder")}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
@@ -101,20 +102,20 @@ function ApiKeyDialog() {
                   setOpen(false);
                 }}
               >
-                Remove Key
+                {t("removeKey")}
               </Button>
             )}
-            <Button onClick={handleSave}>Save</Button>
+            <Button onClick={handleSave}>{t("save")}</Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Don&apos;t have a key?{" "}
+            {t("noKeyPrompt")}{" "}
             <a
               href="https://platform.openai.com/api-keys"
               target="_blank"
               rel="noreferrer"
               className="underline hover:text-foreground"
             >
-              Get one from OpenAI
+              {t("getKeyLink")}
             </a>
             .
           </p>
@@ -124,7 +125,36 @@ function ApiKeyDialog() {
   );
 }
 
+const LOCALES: { value: Locale; label: string }[] = [
+  { value: "en", label: "EN" },
+  { value: "zh", label: "中文" },
+];
+
+function LocaleSwitcher() {
+  const { locale, setLocale } = useLocaleStore();
+
+  return (
+    <div className="flex items-center rounded-md border overflow-hidden">
+      {LOCALES.map(({ value, label }) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => setLocale(value)}
+          className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+            locale === value
+              ? "bg-foreground text-background"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function AppShell() {
+  const t = useTranslations();
   const { activeTab, setActiveTab, lastSyncedAt } = useAppStore();
 
   // Auto-sync on mount if data is stale or empty
@@ -140,24 +170,25 @@ export function AppShell() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold text-orange-500">Y</span>
-            <h1 className="text-lg font-semibold">HN Chatroom</h1>
+            <h1 className="text-lg font-semibold">{t("header.appName")}</h1>
           </div>
           <Badge variant="secondary" className="text-xs">
-            Hacker News AI Assistant
+            {t("header.badge")}
           </Badge>
         </div>
 
         <div className="flex items-center gap-3">
           {lastSyncedAt && (
             <span className="text-xs text-muted-foreground">
-              Last sync: {dayjs(lastSyncedAt).format("HH:mm:ss")}
+              {t("header.lastSync", { time: dayjs(lastSyncedAt).format("HH:mm:ss") })}
             </span>
           )}
+          <LocaleSwitcher />
           <ApiKeyDialog />
           <Button asChild size="sm" variant="outline">
             <a href="https://github.com/1997roylee/yc-chat" target="_blank" rel="noreferrer">
               <SiGithub className="h-4 w-4" />
-              GitHub
+              {t("header.github")}
             </a>
           </Button>
         </div>
@@ -167,8 +198,8 @@ export function AppShell() {
       <div className="flex border-b px-6">
         {(
           [
-            { key: "chat", label: "Chat with AI", icon: IoChatbubblesOutline },
-            { key: "feed", label: "Story Feed", icon: IoNewspaperOutline },
+            { key: "chat", label: t("tabs.chat"), icon: IoChatbubblesOutline },
+            { key: "feed", label: t("tabs.feed"), icon: IoNewspaperOutline },
           ] as { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[]
         ).map((tab) => (
           <button

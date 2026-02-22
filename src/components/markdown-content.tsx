@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { LuCheck, LuCopy } from "react-icons/lu";
 import ReactMarkdown from "react-markdown";
@@ -9,6 +10,7 @@ import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 
 function CopyButton({ text, className }: { text: string; className?: string }) {
+  const t = useTranslations("chat");
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -27,10 +29,10 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
         "text-zinc-400 hover:text-zinc-100 hover:bg-white/10",
         className,
       )}
-      title="Copy"
+      title={t("copy")}
     >
       {copied ? <LuCheck className="h-3.5 w-3.5" /> : <LuCopy className="h-3.5 w-3.5" />}
-      {copied ? "Copied" : "Copy"}
+      {copied ? t("copied") : t("copy")}
     </button>
   );
 }

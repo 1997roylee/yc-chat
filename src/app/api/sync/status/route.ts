@@ -16,18 +16,17 @@ export async function GET() {
   const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
 
   // Last successful sync
-  const lastSync = db
+  const lastSync = await db
     .select()
     .from(syncLog)
     .where(sql`${syncLog.status} = 'completed'`)
     .orderBy(desc(syncLog.completedAt))
-    .limit(1)
-    .all();
+    .limit(1);
 
   const lastSyncedAt = lastSync[0]?.completedAt ?? null;
 
   // Story count
-  const countResult = db.select({ count: sql<number>`count(*)` }).from(stories).all();
+  const countResult = await db.select({ count: sql<number>`count(*)` }).from(stories);
   const storyCount = countResult[0]?.count ?? 0;
 
   // Determine staleness

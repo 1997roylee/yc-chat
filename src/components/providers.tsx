@@ -3,8 +3,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { Toaster } from "react-hot-toast";
+import { IntlProvider } from "@/components/intl-provider";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+type Messages = Record<string, unknown>;
+
+export function Providers({
+  children,
+  initialMessages,
+}: {
+  children: React.ReactNode;
+  initialMessages: Messages;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -19,17 +28,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: "hsl(var(--card))",
-            color: "hsl(var(--card-foreground))",
-            border: "1px solid hsl(var(--border))",
-          },
-        }}
-      />
+      <IntlProvider initialMessages={initialMessages}>
+        {children}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: "hsl(var(--card))",
+              color: "hsl(var(--card-foreground))",
+              border: "1px solid hsl(var(--border))",
+            },
+          }}
+        />
+      </IntlProvider>
     </QueryClientProvider>
   );
 }

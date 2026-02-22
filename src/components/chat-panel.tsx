@@ -3,6 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import { TextStreamChatTransport } from "ai";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IoSend } from "react-icons/io5";
 import {
@@ -24,17 +25,6 @@ import { Input } from "@/components/ui/input";
 import { type SerializedMessage, useChatStore } from "@/lib/stores/chat-store";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import { cn } from "@/lib/utils";
-
-function useCopy(text: string) {
-  const [copied, setCopied] = useState(false);
-  function copy() {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
-  return { copied, copy };
-}
 
 function getMessageText(parts: Array<{ type: string; text?: string }>): string {
   return parts
@@ -59,9 +49,21 @@ function deserializeMessages(messages: SerializedMessage[]): UIMessage[] {
   })) as UIMessage[];
 }
 
+function useCopy(text: string) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+  return { copied, copy };
+}
+
 // ─── Sidebar ───────────────────────────────────────────────────────────────────
 
 function ChatSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  const t = useTranslations("chat");
   const { rooms, activeRoomId, createRoom, deleteRoom, setActiveRoom } = useChatStore();
 
   return (
@@ -74,13 +76,15 @@ function ChatSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: ()
       {/* Sidebar header */}
       <div className="flex items-center justify-between border-b px-2 py-2">
         {!collapsed && (
-          <span className="text-xs font-semibold text-muted-foreground pl-1">Chats</span>
+          <span className="text-xs font-semibold text-muted-foreground pl-1">
+            {t("sidebarTitle")}
+          </span>
         )}
         <button
           type="button"
           onClick={onToggle}
           className="p-1.5 rounded-md hover:bg-accent text-muted-foreground"
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? t("expandSidebar") : t("collapseSidebar")}
         >
           {collapsed ? (
             <LuPanelLeftOpen className="h-4 w-4" />
@@ -99,7 +103,7 @@ function ChatSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: ()
           onClick={() => createRoom()}
         >
           <LuPlus className="h-4 w-4" />
-          {!collapsed && "New Chat"}
+          {!collapsed && t("newChat")}
         </Button>
       </div>
 
@@ -107,7 +111,7 @@ function ChatSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: ()
       {!collapsed && (
         <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2 space-y-1">
           {rooms.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">No chats yet</p>
+            <p className="text-xs text-muted-foreground text-center py-4">{t("noChats")}</p>
           )}
           {rooms.map((room) => (
             <div
@@ -133,7 +137,7 @@ function ChatSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: ()
                   e.stopPropagation();
                   deleteRoom(room.id);
                 }}
-                title="Delete chat"
+                title={t("deleteChat")}
               >
                 <LuTrash2 className="h-3.5 w-3.5" />
               </button>
@@ -148,6 +152,7 @@ function ChatSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: ()
 // ─── Assistant Message ─────────────────────────────────────────────────────────
 
 function AssistantMessage({ text }: { text: string }) {
+  const t = useTranslations("chat");
   const { copied, copy } = useCopy(text);
 
   return (
@@ -155,7 +160,6 @@ function AssistantMessage({ text }: { text: string }) {
       <Card className="p-3 bg-card text-sm">
         <MarkdownContent content={text} />
       </Card>
-      {/* Copy raw button — appears on hover once there's content */}
       {text && (
         <button
           type="button"
@@ -165,10 +169,10 @@ function AssistantMessage({ text }: { text: string }) {
             "text-muted-foreground hover:text-foreground",
             "opacity-0 group-hover:opacity-100",
           )}
-          title="Copy raw response"
+          title={t("copyResponse")}
         >
           {copied ? <LuCheck className="h-3 w-3" /> : <LuCopy className="h-3 w-3" />}
-          {copied ? "Copied" : "Copy"}
+          {copied ? t("copied") : t("copy")}
         </button>
       )}
     </div>
@@ -178,6 +182,7 @@ function AssistantMessage({ text }: { text: string }) {
 // ─── Chat Area ─────────────────────────────────────────────────────────────────
 
 function ActiveChat({ roomId }: { roomId: string }) {
+  const t = useTranslations("chat");
   const { saveMessages, getActiveRoom } = useChatStore();
 
   // Keep saveMessages ref stable to avoid function in useEffect deps
@@ -254,6 +259,13 @@ function ActiveChat({ roomId }: { roomId: string }) {
     [sendMessage],
   );
 
+  const suggestions = [
+    t("suggestions.trending"),
+    t("suggestions.summarize"),
+    t("suggestions.ai"),
+    t("suggestions.debates"),
+  ];
+
   return (
     <div className="flex h-full flex-col flex-1">
       {/* Messages */}
@@ -261,15 +273,10 @@ function ActiveChat({ roomId }: { roomId: string }) {
         {messages.length === 0 && (
           <div className="flex h-full items-center justify-center text-muted-foreground">
             <div className="text-center space-y-3 max-w-md">
-              <h3 className="text-lg font-medium">Ask me about Hacker News</h3>
-              <p className="text-sm">Try questions like:</p>
+              <h3 className="text-lg font-medium">{t("emptyHeading")}</h3>
+              <p className="text-sm">{t("emptySubtitle")}</p>
               <div className="space-y-2">
-                {[
-                  "What's trending on HN today?",
-                  "Summarize the top stories this week",
-                  "Any interesting AI discussions?",
-                  "What are the hottest debates right now?",
-                ].map((suggestion) => (
+                {suggestions.map((suggestion) => (
                   <button
                     type="button"
                     key={suggestion}
@@ -331,8 +338,7 @@ function ActiveChat({ roomId }: { roomId: string }) {
 
         {error && (
           <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-            Error: {error.message}. Make sure an OpenAI API key is set — use the &quot;Set API
-            Key&quot; button in the header.
+            {t("error", { message: error.message })}
           </div>
         )}
       </div>
@@ -343,13 +349,13 @@ function ActiveChat({ roomId }: { roomId: string }) {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about Hacker News..."
+            placeholder={t("inputPlaceholder")}
             disabled={isLoading}
             className="flex-1"
           />
           <Button type="submit" disabled={isLoading || !input.trim()}>
             <IoSend className="h-4 w-4" />
-            Send
+            {t("send")}
           </Button>
         </form>
       </div>
@@ -360,6 +366,7 @@ function ActiveChat({ roomId }: { roomId: string }) {
 // ─── Outer ChatPanel ───────────────────────────────────────────────────────────
 
 export function ChatPanel() {
+  const t = useTranslations("chat");
   const { activeRoomId, createRoom, rooms } = useChatStore();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -383,7 +390,7 @@ export function ChatPanel() {
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
           <div className="flex items-center gap-2 text-sm">
             <LuMessageSquare className="h-5 w-5" />
-            <p>Select or create a chat to get started</p>
+            <p>{t("noActiveRoom")}</p>
           </div>
         </div>
       )}

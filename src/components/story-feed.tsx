@@ -2,6 +2,7 @@
 
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import {
   LuArrowUpFromDot,
@@ -24,6 +25,7 @@ function timeAgo(unixTime: number): string {
 }
 
 function StoryCard({ story }: { story: StoryWithComments }) {
+  const t = useTranslations("feed");
   const [showComments, setShowComments] = useState(false);
 
   return (
@@ -73,7 +75,7 @@ function StoryCard({ story }: { story: StoryWithComments }) {
               className="flex items-center gap-1 hover:underline"
             >
               <LuMessageCircle className="h-3 w-3" />
-              {story.descendants || 0} comments
+              {t("commentsCount", { count: story.descendants || 0 })}
             </a>
             <Badge variant="secondary" className="text-xs">
               {story.type}
@@ -96,7 +98,9 @@ function StoryCard({ story }: { story: StoryWithComments }) {
                 onClick={() => setShowComments(!showComments)}
                 className="text-xs h-7 px-2"
               >
-                {showComments ? "Hide" : "Show"} {story.comments.length} synced comments
+                {showComments
+                  ? t("hideComments", { count: story.comments.length })
+                  : t("showComments", { count: story.comments.length })}
               </Button>
 
               {showComments && (
@@ -126,6 +130,7 @@ function StoryCard({ story }: { story: StoryWithComments }) {
 }
 
 export function StoryFeed() {
+  const t = useTranslations("feed");
   const { feedPeriod, setFeedPeriod } = useAppStore();
   const { data, isLoading, error } = useStories(feedPeriod);
 
@@ -133,7 +138,7 @@ export function StoryFeed() {
     <div className="flex h-full flex-col">
       {/* Period filter */}
       <div className="flex items-center gap-2 p-4 border-b">
-        <span className="text-sm font-medium">Period:</span>
+        <span className="text-sm font-medium">{t("period")}</span>
         {(["today", "week", "all"] as const).map((period) => (
           <Button
             key={period}
@@ -141,11 +146,13 @@ export function StoryFeed() {
             size="sm"
             onClick={() => setFeedPeriod(period)}
           >
-            {period === "today" ? "Today" : period === "week" ? "This Week" : "All"}
+            {period === "today" ? t("today") : period === "week" ? t("thisWeek") : t("all")}
           </Button>
         ))}
         {data && (
-          <span className="text-xs text-muted-foreground ml-auto">{data.total} stories</span>
+          <span className="text-xs text-muted-foreground ml-auto">
+            {t("storiesCount", { count: data.total })}
+          </span>
         )}
       </div>
 
@@ -156,24 +163,22 @@ export function StoryFeed() {
             <div className="flex items-center justify-center py-12">
               <div className="text-center space-y-2">
                 <LuLoader className="h-8 w-8 animate-spin text-orange-500 mx-auto" />
-                <p className="text-sm text-muted-foreground">Loading stories...</p>
+                <p className="text-sm text-muted-foreground">{t("loading")}</p>
               </div>
             </div>
           )}
 
           {error && (
             <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-              Failed to load stories. Try syncing first.
+              {t("loadError")}
             </div>
           )}
 
           {data?.stories.length === 0 && !isLoading && (
             <div className="flex items-center justify-center py-12">
               <div className="text-center space-y-2">
-                <p className="text-sm text-muted-foreground">No stories found for this period.</p>
-                <p className="text-xs text-muted-foreground">
-                  Click the Sync button to fetch the latest data from Hacker News.
-                </p>
+                <p className="text-sm text-muted-foreground">{t("emptyTitle")}</p>
+                <p className="text-xs text-muted-foreground">{t("emptyHint")}</p>
               </div>
             </div>
           )}

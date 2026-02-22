@@ -81,7 +81,7 @@ export async function syncHackerNews(): Promise<{
   commentsCount: number;
 }> {
   // Create sync log entry
-  const logEntries = db.insert(syncLog).values({ status: "running" }).returning().all();
+  const logEntries = await db.insert(syncLog).values({ status: "running" }).returning();
   const logEntry = logEntries[0];
 
   try {
@@ -113,7 +113,8 @@ export async function syncHackerNews(): Promise<{
         type: item.type ?? "story",
       };
 
-      db.insert(stories)
+      await db
+        .insert(stories)
         .values(storyData)
         .onConflictDoUpdate({
           target: stories.id,
@@ -125,8 +126,7 @@ export async function syncHackerNews(): Promise<{
             descendants: storyData.descendants,
             syncedAt: dayjs().toISOString(),
           },
-        })
-        .run();
+        });
 
       storiesCount++;
 
@@ -134,7 +134,8 @@ export async function syncHackerNews(): Promise<{
       if (item.kids && item.kids.length > 0) {
         const storyComments = await fetchStoryComments(item.id, item.kids);
         for (const comment of storyComments) {
-          db.insert(comments)
+          await db
+            .insert(comments)
             .values(comment)
             .onConflictDoUpdate({
               target: comments.id,
@@ -142,34 +143,33 @@ export async function syncHackerNews(): Promise<{
                 text: comment.text,
                 syncedAt: dayjs().toISOString(),
               },
-            })
-            .run();
+            });
           commentsCount++;
         }
       }
     }
 
     // Update sync log
-    db.update(syncLog)
+    await db
+      .update(syncLog)
       .set({
         completedAt: dayjs().toISOString(),
         storiesCount,
         commentsCount,
         status: "completed",
       })
-      .where(eq(syncLog.id, logEntry.id))
-      .run();
+      .where(eq(syncLog.id, logEntry.id));
 
     return { storiesCount, commentsCount };
   } catch (error) {
-    db.update(syncLog)
+    await db
+      .update(syncLog)
       .set({
         completedAt: dayjs().toISOString(),
         status: "failed",
         error: error instanceof Error ? error.message : "Unknown error",
       })
-      .where(eq(syncLog.id, logEntry.id))
-      .run();
+      .where(eq(syncLog.id, logEntry.id));
 
     throw error;
   }

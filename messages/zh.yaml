@@ -1,0 +1,67 @@
+layout:
+  title: "HN 聊天室 - Hacker News AI 助手"
+  description: "通过 AI 了解 Hacker News 的最新动态。获取摘要、洞察，并探索热门故事。"
+
+header:
+  appName: "HN 聊天室"
+  badge: "Hacker News AI 助手"
+  lastSync: "上次同步：{time}"
+  github: "GitHub"
+
+sync:
+  syncing: "正在同步 Hacker News 数据..."
+  syncingUpdating: "正在同步 Hacker News 数据（更新中）..."
+
+apiKey:
+  buttonSet: "已设置 API 密钥"
+  buttonUnset: "设置 API 密钥"
+  dialogTitle: "OpenAI API 密钥"
+  dialogDescription: "输入您自己的 OpenAI API 密钥。密钥仅保存在您的浏览器本地，并随每次请求发送——不会保存在服务器上。"
+  placeholder: "sk-..."
+  removeKey: "删除密钥"
+  save: "保存"
+  noKeyPrompt: "没有密钥？"
+  getKeyLink: "前往 OpenAI 获取"
+
+tabs:
+  chat: "AI 对话"
+  feed: "故事列表"
+
+chat:
+  sidebarTitle: "对话"
+  expandSidebar: "展开侧边栏"
+  collapseSidebar: "收起侧边栏"
+  newChat: "新建对话"
+  noChats: "暂无对话"
+  deleteChat: "删除对话"
+  emptyHeading: "来问问 Hacker News 的事吧"
+  emptySubtitle: "试试这些问题："
+  suggestions:
+    trending: "今天 HN 上有什么热门？"
+    summarize: "总结本周热门故事"
+    ai: "有什么有趣的 AI 讨论？"
+    debates: "现在最热烈的讨论是什么？"
+  inputPlaceholder: "询问关于 Hacker News 的问题..."
+  send: "发送"
+  noActiveRoom: "选择或新建一个对话以开始"
+  error: "错误：{message}。请确保已设置 OpenAI API 密钥——使用页头的「设置 API 密钥」按钮。"
+  copyResponse: "复制原始回复"
+  copy: "复制"
+  copied: "已复制"
+
+feed:
+  period: "时段："
+  today: "今天"
+  thisWeek: "本周"
+  all: "全部"
+  storiesCount: "{count} 篇故事"
+  commentsCount: "{count} 条评论"
+  showComments: "显示 {count} 条已同步评论"
+  hideComments: "隐藏 {count} 条已同步评论"
+  loading: "正在加载故事..."
+  loadError: "故事加载失败，请先同步数据。"
+  emptyTitle: "该时段暂无故事。"
+  emptyHint: "点击同步按钮以从 Hacker News 获取最新数据。"
+
+common:
+  close: "关闭"

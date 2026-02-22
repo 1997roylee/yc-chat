@@ -3,44 +3,42 @@ import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import dayjs from "dayjs";
 import { desc, gte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import type { Story } from "@/lib/db/schema";
 import { comments, stories } from "@/lib/db/schema";
 
 export const maxDuration = 30;
 
-function getHNContext(): string {
+async function getHNContext(): Promise<string> {
   const oneDayAgo = dayjs().subtract(1, "day").unix();
   const oneWeekAgo = dayjs().subtract(7, "day").unix();
 
   // Get today's top stories
-  const todayStories = db
+  const todayStories: Story[] = await db
     .select()
     .from(stories)
     .where(gte(stories.time, oneDayAgo))
     .orderBy(desc(stories.score))
-    .limit(20)
-    .all();
+    .limit(20);
 
   // Get this week's top stories
-  const weekStories = db
+  const weekStories: Story[] = await db
     .select()
     .from(stories)
     .where(gte(stories.time, oneWeekAgo))
     .orderBy(desc(stories.score))
-    .limit(30)
-    .all();
+    .limit(30);
 
   let context = "## Today's Top Hacker News Stories\n\n";
 
   if (todayStories.length === 0) {
     context += "No stories synced for today yet. The data may need to be synced first.\n\n";
   } else {
-    todayStories.forEach((story, i) => {
-      const storyComments = db
+    for (const [i, story] of todayStories.entries()) {
+      const storyComments = await db
         .select()
         .from(comments)
         .where(sql`${comments.storyId} = ${story.id}`)
-        .limit(5)
-        .all();
+        .limit(5);
 
       context += `${i + 1}. **${story.title}** (Score: ${story.score}, ${story.descendants || 0} comments)\n`;
       context += `   - By: ${story.by} | URL: ${story.url || "text post"}\n`;
@@ -48,20 +46,20 @@ function getHNContext(): string {
 
       if (storyComments.length > 0) {
         context += `   - Top comments:\n`;
-        storyComments.forEach((c) => {
+        for (const c of storyComments) {
           const cleanText = c.text ? c.text.replace(/<[^>]*>/g, "").slice(0, 200) : "";
           context += `     - ${c.by}: ${cleanText}\n`;
-        });
+        }
       }
       context += "\n";
-    });
+    }
   }
 
   context += "\n## This Week's Top Stories\n\n";
-  weekStories.forEach((story, i) => {
+  for (const [i, story] of weekStories.entries()) {
     context += `${i + 1}. **${story.title}** (Score: ${story.score}, ${story.descendants || 0} comments) by ${story.by}\n`;
     if (story.url) context += `   URL: ${story.url}\n`;
-  });
+  }
 
   return context;
 }
@@ -92,7 +90,7 @@ export async function POST(req: Request) {
     apiKey: clientApiKey ?? process.env.OPENAI_API_KEY,
   });
 
-  const hnContext = getHNContext();
+  const hnContext = await getHNContext();
 
   // Convert UIMessages to model messages for streamText
   const modelMessages = await convertToModelMessages(messages);
