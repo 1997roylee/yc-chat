@@ -23,6 +23,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { type SerializedMessage, useChatStore } from "@/lib/stores/chat-store";
 import { useSettingsStore } from "@/lib/stores/settings-store";
 import { cn } from "@/lib/utils";
@@ -251,6 +252,40 @@ function AssistantMessage({ text }: { text: string }) {
   );
 }
 
+// ─── Chat loading skeleton ─────────────────────────────────────────────────────
+
+function ChatSkeleton() {
+  return (
+    <div className="space-y-6 py-2">
+      {/* Assistant message skeleton */}
+      <div className="flex gap-2 sm:gap-3">
+        <Skeleton className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 rounded-full" />
+        <div className="space-y-2 flex-1 max-w-[80%]">
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-4 w-5/6" />
+        </div>
+      </div>
+      {/* User message skeleton */}
+      <div className="flex gap-2 sm:gap-3 justify-end">
+        <div className="space-y-2 max-w-[60%]">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4 ml-auto" />
+        </div>
+        <Skeleton className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 rounded-full" />
+      </div>
+      {/* Assistant message skeleton */}
+      <div className="flex gap-2 sm:gap-3">
+        <Skeleton className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 rounded-full" />
+        <div className="space-y-2 flex-1 max-w-[80%]">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Chat Area ─────────────────────────────────────────────────────────────────
 
 function ActiveChat({ roomId, onOpenDrawer }: { roomId: string; onOpenDrawer: () => void }) {
@@ -264,6 +299,13 @@ function ActiveChat({ roomId, onOpenDrawer }: { roomId: string; onOpenDrawer: ()
     const room = getActiveRoom();
     return room?.messages ? deserializeMessages(room.messages) : [];
   });
+
+  // Show a skeleton briefly when switching rooms
+  const [isMounting, setIsMounting] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setIsMounting(false), 150);
+    return () => clearTimeout(timer);
+  }, []);
 
   const transport = useMemo(
     () =>
@@ -352,77 +394,85 @@ function ActiveChat({ roomId, onOpenDrawer }: { roomId: string; onOpenDrawer: ()
 
       {/* Messages */}
       <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4" ref={scrollRef}>
-        {messages.length === 0 && (
-          <div className="flex h-full items-center justify-center text-muted-foreground">
-            <div className="text-center space-y-3 max-w-sm px-2">
-              <h3 className="text-lg font-medium">{t("emptyHeading")}</h3>
-              <p className="text-sm">{t("emptySubtitle")}</p>
-              <div className="space-y-2">
-                {suggestions.map((suggestion) => (
-                  <button
-                    type="button"
-                    key={suggestion}
-                    onClick={() => handleSuggestion(suggestion)}
-                    className="block w-full rounded-lg border border-border bg-card p-3 text-left text-sm transition-colors hover:bg-accent"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
+        {isMounting ? (
+          <ChatSkeleton />
+        ) : (
+          <>
+            {messages.length === 0 && (
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                <div className="text-center space-y-3 max-w-sm px-2">
+                  <h3 className="text-lg font-medium">{t("emptyHeading")}</h3>
+                  <p className="text-sm">{t("emptySubtitle")}</p>
+                  <div className="space-y-2">
+                    {suggestions.map((suggestion) => (
+                      <button
+                        type="button"
+                        key={suggestion}
+                        onClick={() => handleSuggestion(suggestion)}
+                        className="block w-full rounded-lg border border-border bg-card p-3 text-left text-sm transition-colors hover:bg-accent"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        <div className="space-y-4">
-          {messages.map((message) => {
-            const text = getMessageText(message.parts as Array<{ type: string; text?: string }>);
-            return (
-              <div
-                key={message.id}
-                className={`flex gap-2 sm:gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                {message.role === "assistant" && (
+            <div className="space-y-4">
+              {messages.map((message) => {
+                const text = getMessageText(
+                  message.parts as Array<{ type: string; text?: string }>,
+                );
+                return (
+                  <div
+                    key={message.id}
+                    className={`flex gap-2 sm:gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    {message.role === "assistant" && (
+                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white">
+                        <SiYcombinator className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      </Avatar>
+                    )}
+                    {message.role === "assistant" ? (
+                      <AssistantMessage text={text} />
+                    ) : (
+                      <Card className="max-w-[90%] sm:max-w-[80%] p-3 bg-primary text-primary-foreground">
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{text}</p>
+                      </Card>
+                    )}
+                    {message.role === "user" && (
+                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 bg-blue-500 flex items-center justify-center text-white">
+                        <LuUser className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      </Avatar>
+                    )}
+                  </div>
+                );
+              })}
+
+              {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
+                <div className="flex gap-2 sm:gap-3">
                   <Avatar className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white">
                     <SiYcombinator className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </Avatar>
-                )}
-                {message.role === "assistant" ? (
-                  <AssistantMessage text={text} />
-                ) : (
-                  <Card className="max-w-[90%] sm:max-w-[80%] p-3 bg-primary text-primary-foreground">
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{text}</p>
-                  </Card>
-                )}
-                {message.role === "user" && (
-                  <Avatar className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 bg-blue-500 flex items-center justify-center text-white">
-                    <LuUser className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </Avatar>
-                )}
-              </div>
-            );
-          })}
-
-          {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-            <div className="flex gap-2 sm:gap-3">
-              <Avatar className="h-7 w-7 sm:h-8 sm:w-8 shrink-0 bg-orange-500 flex items-center justify-center text-white">
-                <SiYcombinator className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </Avatar>
-              {/* <Card className="p-3 bg-card">
-                <div className="flex space-x-1">
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" />
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.2s]" />
-                  <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.4s]" />
+                  {/* <Card className="p-3 bg-card">
+                    <div className="flex space-x-1">
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground" />
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.2s]" />
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0.4s]" />
+                    </div>
+                  </Card> */}
+                  <Spinner className="text-2xl" />
                 </div>
-              </Card> */}
-              <Spinner className="text-2xl" />
+              )}
             </div>
-          )}
-        </div>
 
-        {error && (
-          <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-            {t("error", { message: error.message })}
-          </div>
+            {error && (
+              <div className="mt-4 rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+                {t("error", { message: error.message })}
+              </div>
+            )}
+          </>
         )}
       </div>
 
