@@ -75,7 +75,8 @@ function ApiKeyDialog() {
           className={isSet ? "border-green-500 text-green-600" : ""}
         >
           <LuKey className="h-4 w-4" />
-          {isSet ? t("buttonSet") : t("buttonUnset")}
+          {/* Hide text label on very small screens */}
+          <span className="hidden sm:inline">{isSet ? t("buttonSet") : t("buttonUnset")}</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
@@ -166,36 +167,43 @@ export function AppShell() {
       <SyncBanner />
 
       {/* Header */}
-      <header className="flex items-center justify-between border-b px-6 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-orange-500">Y</span>
-            <h1 className="text-lg font-semibold">{t("header.appName")}</h1>
+      <header className="flex items-center justify-between border-b px-3 py-2 sm:px-6 sm:py-3">
+        {/* Left: logo + name + badge */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <span className="text-xl sm:text-2xl font-bold text-orange-500">Y</span>
+            <h1 className="text-base sm:text-lg font-semibold truncate">
+              {/* Show abbreviated name on mobile */}
+              <span className="hidden sm:inline">{t("header.appName")}</span>
+              <span className="sm:hidden">HN Chat</span>
+            </h1>
           </div>
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
             {t("header.badge")}
           </Badge>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Right: actions */}
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          {/* Last sync time — hidden on mobile */}
           {lastSyncedAt && (
-            <span className="text-xs text-muted-foreground">
+            <span className="hidden md:block text-xs text-muted-foreground">
               {t("header.lastSync", { time: dayjs(lastSyncedAt).format("HH:mm:ss") })}
             </span>
           )}
           <LocaleSwitcher />
           <ApiKeyDialog />
-          <Button asChild size="sm" variant="outline">
+          <Button asChild size="sm" variant="outline" className="px-2 sm:px-3">
             <a href="https://github.com/1997roylee/yc-chat" target="_blank" rel="noreferrer">
               <SiGithub className="h-4 w-4" />
-              {t("header.github")}
+              <span className="hidden sm:inline">{t("header.github")}</span>
             </a>
           </Button>
         </div>
       </header>
 
       {/* Tab navigation */}
-      <div className="flex border-b px-6">
+      <div className="flex border-b px-3 sm:px-6">
         {(
           [
             { key: "chat", label: t("tabs.chat"), icon: IoChatbubblesOutline },
@@ -206,7 +214,7 @@ export function AppShell() {
             type="button"
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab.key
                 ? "border-orange-500 text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"

@@ -29,10 +29,10 @@ function StoryCard({ story }: { story: StoryWithComments }) {
   const [showComments, setShowComments] = useState(false);
 
   return (
-    <Card className="p-4 hover:bg-accent/50 transition-colors">
+    <Card className="p-3 sm:p-4 hover:bg-accent/50 transition-colors">
       <div className="flex gap-3">
         {/* Score */}
-        <div className="flex flex-col items-center justify-start min-w-[40px]">
+        <div className="flex flex-col items-center justify-start min-w-[36px] sm:min-w-[40px]">
           <LuArrowUpFromDot className="h-4 w-4 text-orange-500" />
           <span className="text-lg font-bold text-orange-500">{story.score}</span>
         </div>
@@ -59,7 +59,7 @@ function StoryCard({ story }: { story: StoryWithComments }) {
             </p>
           )}
 
-          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <LuUser className="h-3 w-3" />
               {story.by}
@@ -137,14 +137,15 @@ export function StoryFeed() {
   return (
     <div className="flex h-full flex-col">
       {/* Period filter */}
-      <div className="flex items-center gap-2 p-4 border-b">
-        <span className="text-sm font-medium">{t("period")}</span>
+      <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:p-4 border-b">
+        <span className="hidden sm:inline text-sm font-medium">{t("period")}</span>
         {(["today", "week", "all"] as const).map((period) => (
           <Button
             key={period}
             variant={feedPeriod === period ? "default" : "outline"}
             size="sm"
             onClick={() => setFeedPeriod(period)}
+            className="px-2.5 sm:px-3 text-xs sm:text-sm h-7 sm:h-9"
           >
             {period === "today" ? t("today") : period === "week" ? t("thisWeek") : t("all")}
           </Button>
@@ -158,7 +159,7 @@ export function StoryFeed() {
 
       {/* Stories list */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="p-4 space-y-3">
+        <div className="p-3 sm:p-4 space-y-3">
           {isLoading && (
             <div className="flex items-center justify-center py-12">
               <div className="text-center space-y-2">
