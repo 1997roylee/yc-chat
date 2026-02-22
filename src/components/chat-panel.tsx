@@ -78,7 +78,7 @@ function SidebarContent({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-3 py-2">
+      {/* <div className="flex items-center justify-between border-b px-3 py-2">
         <span className="text-xs font-semibold text-muted-foreground">{t("sidebarTitle")}</span>
         {onClose && (
           <button
@@ -89,7 +89,7 @@ function SidebarContent({
             <LuX className="h-4 w-4" />
           </button>
         )}
-      </div>
+      </div> */}
 
       {/* New chat button */}
       <div className="p-2">
@@ -484,15 +484,15 @@ function ActiveChat({ roomId, onOpenDrawer }: { roomId: string; onOpenDrawer: ()
             onChange={(e) => setInput(e.target.value)}
             placeholder={t("inputPlaceholder")}
             disabled={isLoading}
-            className="flex-1"
+            className="flex-1 h-11 text-base"
           />
           <Button
             type="submit"
             disabled={isLoading || !input.trim()}
-            size="sm"
-            className="sm:text-sm"
+            size="lg"
+            className="h-11 px-4 text-base"
           >
-            <IoSend className="h-4 w-4" />
+            <IoSend className="h-5 w-5" />
             <span className="hidden sm:inline">{t("send")}</span>
           </Button>
         </form>
