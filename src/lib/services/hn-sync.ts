@@ -5,9 +5,9 @@ import type { NewComment, NewStory } from "@/lib/db/schema";
 import { comments, stories, syncLog } from "@/lib/db/schema";
 
 const HN_API_BASE = "https://hacker-news.firebaseio.com/v0";
-const TOP_STORIES_LIMIT = 50;
-const COMMENTS_PER_STORY = 10; // top N comments per story
-const FETCH_CONCURRENCY = 10; // parallel fetches
+const TOP_STORIES_LIMIT = 30; // reduced from 50 for reliability
+const COMMENTS_PER_STORY = 5; // reduced from 10 for reliability
+const FETCH_CONCURRENCY = 20; // parallel HN API fetches
 
 interface HNItem {
   id: number;
@@ -39,43 +39,27 @@ async function fetchItem(id: number): Promise<HNItem | null> {
   return fetchJSON<HNItem>(`${HN_API_BASE}/item/${id}.json`);
 }
 
-/** Fetch items in batches with concurrency limit */
-async function fetchItemsBatch(
-  ids: number[],
-  concurrency = FETCH_CONCURRENCY,
-): Promise<(HNItem | null)[]> {
-  const results: (HNItem | null)[] = [];
-  for (let i = 0; i < ids.length; i += concurrency) {
-    const batch = ids.slice(i, i + concurrency);
-    const batchResults = await Promise.all(batch.map(fetchItem));
-    results.push(...batchResults);
+/**
+ * Run an array of async tasks with a maximum concurrency limit.
+ * Returns results in the same order as the input.
+ */
+async function withConcurrency<T>(tasks: (() => Promise<T>)[], concurrency: number): Promise<T[]> {
+  const results: T[] = new Array(tasks.length);
+  let index = 0;
+
+  async function worker() {
+    while (index < tasks.length) {
+      const i = index++;
+      results[i] = await tasks[i]();
+    }
   }
+
+  const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, worker);
+  await Promise.all(workers);
   return results;
 }
 
-/** Fetch top-level comments for a story */
-async function fetchStoryComments(storyId: number, kidIds: number[]): Promise<NewComment[]> {
-  const topKids = kidIds.slice(0, COMMENTS_PER_STORY);
-  const items = await fetchItemsBatch(topKids);
-
-  const result: NewComment[] = [];
-
-  for (const item of items) {
-    if (!item || item.deleted || item.dead || !item.text) continue;
-    result.push({
-      id: item.id,
-      storyId,
-      parentId: item.parent === storyId ? null : (item.parent ?? null),
-      by: item.by ?? null,
-      text: item.text,
-      time: item.time ?? null,
-    });
-  }
-
-  return result;
-}
-
-/** Main sync function: fetches top stories + their comments */
+/** Main sync function: fetches top stories + their comments, fully parallelised */
 export async function syncHackerNews(): Promise<{
   storiesCount: number;
   commentsCount: number;
@@ -91,69 +75,90 @@ export async function syncHackerNews(): Promise<{
 
     const storyIds = topStoryIds.slice(0, TOP_STORIES_LIMIT);
 
-    // 2. Fetch story details
-    const storyItems = await fetchItemsBatch(storyIds);
+    // 2. Fetch all story details concurrently
+    const storyItems = await withConcurrency(
+      storyIds.map((id) => () => fetchItem(id)),
+      FETCH_CONCURRENCY,
+    );
 
-    let storiesCount = 0;
-    let commentsCount = 0;
+    const validStories = storyItems.filter((item): item is HNItem => !!item && !!item.title);
 
-    for (const item of storyItems) {
-      if (!item || !item.title) continue;
+    // 3. Fetch all comments for all stories concurrently
+    const commentTasks = validStories.flatMap((item) =>
+      (item.kids ?? []).slice(0, COMMENTS_PER_STORY).map(
+        (kidId) => () =>
+          fetchItem(kidId).then((comment) =>
+            comment && !comment.deleted && !comment.dead && comment.text
+              ? ({
+                  id: comment.id,
+                  storyId: item.id,
+                  parentId: comment.parent === item.id ? null : (comment.parent ?? null),
+                  by: comment.by ?? null,
+                  text: comment.text,
+                  time: comment.time ?? null,
+                } satisfies NewComment)
+              : null,
+          ),
+      ),
+    );
 
-      // Upsert story
-      const storyData: NewStory = {
-        id: item.id,
-        title: item.title,
-        url: item.url ?? null,
-        text: item.text ?? null,
-        by: item.by ?? "unknown",
-        score: item.score ?? 0,
-        descendants: item.descendants ?? 0,
-        time: item.time ?? dayjs().unix(),
-        type: item.type ?? "story",
-      };
+    const commentResults = await withConcurrency(commentTasks, FETCH_CONCURRENCY);
+    const validComments = commentResults.filter((c): c is NonNullable<typeof c> => c !== null);
 
+    // 4. Batch-upsert all stories in a single statement
+    const now = dayjs().toISOString();
+
+    const storyRows: NewStory[] = validStories.map((item) => ({
+      id: item.id,
+      title: item.title as string,
+      url: item.url ?? null,
+      text: item.text ?? null,
+      by: item.by ?? "unknown",
+      score: item.score ?? 0,
+      descendants: item.descendants ?? 0,
+      time: item.time ?? dayjs().unix(),
+      type: item.type ?? "story",
+    }));
+
+    if (storyRows.length > 0) {
       await db
         .insert(stories)
-        .values(storyData)
+        .values(storyRows)
         .onConflictDoUpdate({
           target: stories.id,
           set: {
-            title: storyData.title,
-            url: storyData.url,
-            text: storyData.text,
-            score: storyData.score,
-            descendants: storyData.descendants,
-            syncedAt: dayjs().toISOString(),
+            title: stories.title,
+            url: stories.url,
+            text: stories.text,
+            score: stories.score,
+            descendants: stories.descendants,
+            syncedAt: now,
           },
         });
-
-      storiesCount++;
-
-      // 3. Fetch comments for this story
-      if (item.kids && item.kids.length > 0) {
-        const storyComments = await fetchStoryComments(item.id, item.kids);
-        for (const comment of storyComments) {
-          await db
-            .insert(comments)
-            .values(comment)
-            .onConflictDoUpdate({
-              target: comments.id,
-              set: {
-                text: comment.text,
-                syncedAt: dayjs().toISOString(),
-              },
-            });
-          commentsCount++;
-        }
-      }
     }
+
+    // 5. Batch-upsert all comments in a single statement
+    if (validComments.length > 0) {
+      await db
+        .insert(comments)
+        .values(validComments)
+        .onConflictDoUpdate({
+          target: comments.id,
+          set: {
+            text: comments.text,
+            syncedAt: now,
+          },
+        });
+    }
+
+    const storiesCount = storyRows.length;
+    const commentsCount = validComments.length;
 
     // Update sync log
     await db
       .update(syncLog)
       .set({
-        completedAt: dayjs().toISOString(),
+        completedAt: now,
         storiesCount,
         commentsCount,
         status: "completed",
