@@ -172,11 +172,6 @@ export function AppShell() {
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <span className="text-xl sm:text-2xl font-bold text-orange-500">Y</span>
-            <h1 className="text-base sm:text-lg font-semibold truncate">
-              {/* Show abbreviated name on mobile */}
-              <span className="hidden sm:inline">{t("header.appName")}</span>
-              <span className="sm:hidden">HN Chat</span>
-            </h1>
           </div>
           <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
             {t("header.badge")}

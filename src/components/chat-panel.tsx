@@ -455,23 +455,25 @@ function ActiveChat({ roomId, onOpenDrawer }: { roomId: string; onOpenDrawer: ()
       </div>
 
       {/* Input */}
-      <div className="border-t p-3 sm:p-4">
-        <form onSubmit={handleSubmit} className="flex gap-2">
+      <div className="p-3 sm:p-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex items-center gap-2 rounded-full border-0 bg-background px-4 py-2 shadow-[0_2px_16px_rgba(0,0,0,0.10)] ring-1 ring-border/40"
+        >
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={t("inputPlaceholder")}
             disabled={isLoading}
-            className="flex-1 h-11 text-base"
+            className="flex-1 h-9 border-0 bg-transparent shadow-none focus-visible:ring-0 text-base px-0"
           />
           <Button
             type="submit"
             disabled={isLoading || !input.trim()}
-            size="lg"
-            className="h-11 px-4 text-base"
+            size="icon"
+            className="h-9 w-9 rounded-full shrink-0"
           >
-            <IoSend className="h-5 w-5" />
-            <span className="hidden sm:inline">{t("send")}</span>
+            <IoSend className="h-4 w-4" />
           </Button>
         </form>
       </div>

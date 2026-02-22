@@ -26,7 +26,7 @@ export function IntlProvider({
   }, [locale]);
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <NextIntlClientProvider locale={locale} messages={messages} timeZone="Asia/Tokyo">
       {children}
     </NextIntlClientProvider>
   );
